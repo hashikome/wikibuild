@@ -2,14 +2,14 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['dist/'] },
+  { ignores: ['dist/', '.playwright-mcp/'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: { ...globals.browser } },
   },
   {
-    files: ['vite.config.js', 'eslint.config.js'],
+    files: ['vite.config.js', 'eslint.config.js', 'tests/**/*.js'],
     languageOptions: { globals: { ...globals.node } },
   },
 ];
