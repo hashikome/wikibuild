@@ -22,15 +22,17 @@ npm test          # profile file validation tests
 npm run format    # Prettier
 ```
 
-## Load your profile
+## Load and save your profile
 
 Use **Settings → Personal → Profile → Load profile** to select a local JSON file
 containing `name`, `email` and `title`. Start with [examples/profile.json](examples/profile.json).
 The current member ID and assignments stay intact; the imported details persist
-in this browser. The source file is not modified.
+in this browser. Edit the fields and choose **Save profile** to write back to the
+loaded file, or choose a destination if no file is connected. Browsers without
+direct file access download a new copy instead. File access lasts for this session.
 
 See [the profile guide](docs/profile.md) for the format and behavior.
-[Saving profile edits back to the file](docs/backlog/profile-save-to-file.md) is in the backlog.
+[Remembering file access across reloads](docs/backlog/profile-save-to-file.md) is deferred.
 
 ## Project structure
 

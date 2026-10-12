@@ -13,7 +13,7 @@ import { viewOf } from '../shell/view-engine.js';
 import { TEMPLATES, closeModal, openModal } from '../overlays/modals.js';
 import { closePop, openPop, tgt } from '../overlays/popovers.js';
 import { strengthMeter } from '../pages/settings.js';
-import { readProfile } from '../core/profile.js';
+import { parseProfile, readProfileDocument, serializeProfile, writeProfile, PROFILE_FILE_TYPES } from '../core/profile.js';
 
 export const A = {},
   IN = {},
@@ -1934,54 +1934,115 @@ A.avColor = el => {
   save();
   render();
 };
-A.loadProfile = () => $('#pf-file')?.click();
-IN.profileFile = async el => {
-  const file = el.files?.[0];
-  el.value = ''; // Selecting the same file again should refresh its contents.
-  if (!file || S.ui.profileLoading) return;
+// File access is intentionally session-only; it is never included in saved state.
+let profileConnection = null;
+const profileDraft = () => ({ name: $('#pf-name').value, email: $('#pf-email').value, title: $('#pf-title').value });
+IN.profileDraft = () => {
+  S.ui.profileDraft = profileDraft();
+};
+function applyProfile(member, profile) {
+  Object.assign(member, profile);
+  S.prefs.name = profile.name;
+  S.prefs.title = profile.title;
+  S.ui.profileDraft = null;
+  S.ui.errors.pname2 = null;
+  save();
+}
+async function pickProfileFile(picker) {
+  try {
+    return await picker();
+  } catch (error) {
+    if (error.name === 'AbortError') return null; // Picker cancellation, not a failed write.
+    throw error;
+  }
+}
+async function loadProfileFile(select) {
+  if (S.ui.profileLoading || S.ui.profileSaving) return;
   const member = me();
+  S.ui.profileDraft = profileDraft();
   S.ui.profileLoading = true;
   S.ui.errors.profileFile = null;
-  render();
   try {
-    const profile = await readProfile(file);
+    const selection = select(); // Invoke native pickers directly in the user gesture.
+    render();
+    const selected = await selection;
+    if (!selected) return;
+    const { handle, file } = selected;
+    const document = await readProfileDocument(file || (await handle.getFile()));
     if (!member || me() !== member) throw new Error('The current profile changed. Load the file again.');
-    if (
-      mutate(() => {
-        Object.assign(member, profile);
-        S.prefs.name = profile.name;
-        S.prefs.title = profile.title;
-        S.ui.errors.pname2 = null;
-      })
-    )
-      toast('Profile loaded');
+    applyProfile(member, document.profile);
+    profileConnection = handle ? { member, handle, text: document.text } : null;
+    S.ui.profileFileName = handle?.name || null;
+    toast('Profile loaded');
   } catch (error) {
-    S.ui.errors.profileFile = error.message;
+    S.ui.errors.profileFile = error.name === 'NotAllowedError' ? 'File access was denied. Try loading the file again.' : error.message;
   } finally {
     S.ui.profileLoading = false;
     render();
   }
-};
-A.saveProfile = () => {
-  const n = $('#pf-name').value.trim();
-  if (!n) {
-    S.ui.errors.pname2 = 'Enter your name';
-    render();
-    return;
-  }
-  S.ui.errors.pname2 = null;
-  const tt = $('#pf-title').value.trim();
-  loadingBtn('pf-save', 600, () => {
-    if (
-      mutate(() => {
-        S.prefs.name = n;
-        S.prefs.title = tt;
-        me().name = n;
-        me().title = tt;
-      })
-    )
-      toast('Profile updated');
+}
+A.loadProfile = () => {
+  if (!window.showOpenFilePicker) return $('#pf-file')?.click();
+  return loadProfileFile(async () => {
+    const handles = await pickProfileFile(() => window.showOpenFilePicker({ types: PROFILE_FILE_TYPES, multiple: false }));
+    return handles ? { handle: handles[0] } : null;
   });
+};
+IN.profileFile = el => {
+  const file = el.files?.[0];
+  el.value = '';
+  if (file) return loadProfileFile(() => ({ file }));
+};
+A.saveProfile = async () => {
+  if (S.ui.profileSaving || S.ui.profileLoading) return;
+  const member = me();
+  S.ui.profileDraft = profileDraft();
+  S.ui.errors.profileFile = null;
+  S.ui.profileSaving = true;
+  try {
+    const profile = parseProfile(JSON.stringify(S.ui.profileDraft));
+    let connection = profileConnection?.member === member ? profileConnection : null;
+    if (!connection && !window.showSaveFilePicker) {
+      const url = URL.createObjectURL(new Blob([serializeProfile(profile)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'profile.json';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      applyProfile(member, profile);
+      toast('Profile download started. Your original file is unchanged.', { kind: 'info' });
+      return;
+    }
+    if (!connection) {
+      const selection = pickProfileFile(() => window.showSaveFilePicker({ suggestedName: 'profile.json', types: PROFILE_FILE_TYPES }));
+      render();
+      const handle = await selection;
+      if (!handle) return;
+      connection = { member, handle, text: null };
+    }
+    if (me() !== member) throw new Error('The current profile changed. Load the file again.');
+    const writing = writeProfile(connection.handle, profile, connection.text);
+    render();
+    const text = await writing;
+    if (me() === member) {
+      profileConnection = { ...connection, text };
+      S.ui.profileFileName = connection.handle.name;
+      applyProfile(member, profile);
+    }
+    toast(`Profile saved to ${connection.handle.name}`);
+  } catch (error) {
+    S.ui.errors.profileFile =
+      error.name === 'NotAllowedError'
+        ? 'File access was denied. Allow access and try Save profile again.'
+        : error.name === 'NotFoundError'
+          ? 'The file is unavailable. Restore it or load another profile file.'
+          : error.name === 'Error'
+            ? error.message
+            : 'Could not write the profile file. Your edits are still here; try saving again.';
+  } finally {
+    S.ui.profileSaving = false;
+    render();
+  }
 };
 IN.pwStrength = el => {
   S.ui.pwNew = el.value;

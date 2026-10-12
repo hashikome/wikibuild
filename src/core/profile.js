@@ -23,6 +23,10 @@ export function parseProfile(text) {
 }
 
 export async function readProfile(file) {
+  return (await readProfileDocument(file)).profile;
+}
+
+export async function readProfileDocument(file) {
   if (file.size > PROFILE_MAX_BYTES) throw new Error('Profile files must be 64 KB or smaller.');
   let text;
   try {
@@ -30,5 +34,34 @@ export async function readProfile(file) {
   } catch {
     throw new Error('Could not read this file. Select it again and try again.');
   }
-  return parseProfile(text);
+  return { profile: parseProfile(text), text };
+}
+
+export const PROFILE_FILE_TYPES = [{ description: 'Profile JSON', accept: { 'application/json': ['.json'] } }];
+
+export function serializeProfile(profile) {
+  return JSON.stringify(parseProfile(JSON.stringify(profile)), null, 2) + '\n';
+}
+
+// The caller holds the handle and last-read contents only for this page session.
+export async function writeProfile(handle, profile, expectedText = null) {
+  const text = serializeProfile(profile);
+  if (handle.requestPermission && (await handle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+    throw new Error('File access was denied. Allow access and try Save profile again.');
+  }
+  if (expectedText !== null) {
+    const file = await handle.getFile();
+    if (file.size > PROFILE_MAX_BYTES || (await file.text()) !== expectedText) {
+      throw new Error('This file changed outside the app. Copy your pending edits, then load the updated file before saving.');
+    }
+  }
+  const writable = await handle.createWritable();
+  try {
+    await writable.write(text);
+    await writable.close();
+  } catch (error) {
+    await writable.abort().catch(() => {});
+    throw error;
+  }
+  return text;
 }

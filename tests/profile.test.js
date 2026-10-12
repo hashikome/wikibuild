@@ -46,3 +46,86 @@ test('reports unreadable files without exposing lower-level errors', async () =>
     /Could not read this file/,
   );
 });
+
+test('writes only portable fields, commits on close and can save again', async () => {
+  const { writeProfile, serializeProfile } = await import('../src/core/profile.js');
+  let contents = JSON.stringify(profile);
+  let closed = false;
+  const handle = {
+    requestPermission: async () => 'granted',
+    getFile: async () => ({ size: contents.length, text: async () => contents }),
+    createWritable: async () => {
+      let pending;
+      return {
+        write: async text => {
+          pending = text;
+          assert.equal(closed, false);
+        },
+        close: async () => {
+          contents = pending;
+          closed = true;
+        },
+      };
+    },
+  };
+  const updated = { ...profile, name: 'Paul Updated', email: 'updated@example.com', title: 'Engineer' };
+  const saved = await writeProfile(handle, { ...updated, id: 'm6', role: 'Owner' }, contents);
+  assert.equal(closed, true);
+  assert.equal(contents, serializeProfile(updated));
+  assert.deepEqual(JSON.parse(contents), updated);
+  closed = false;
+  await writeProfile(handle, profile, saved);
+  assert.deepEqual(JSON.parse(contents), profile);
+});
+
+test('denied permission and external edits never open a writable stream', async () => {
+  const { writeProfile } = await import('../src/core/profile.js');
+  const handle = {
+    requestPermission: async () => 'denied',
+    createWritable: async () => assert.fail('Must not open a write stream'),
+    getFile: async () => ({ size: 10, text: async () => 'agent edits' }),
+  };
+  await assert.rejects(writeProfile(handle, profile, 'original'), /access was denied/);
+  handle.requestPermission = async () => 'granted';
+  await assert.rejects(writeProfile(handle, profile, 'original'), /changed outside/);
+  await assert.rejects(writeProfile(handle, { ...profile, email: '' }), /email/);
+});
+
+test('write and close failures reject and abort instead of claiming success', async () => {
+  const { writeProfile } = await import('../src/core/profile.js');
+  for (const failAt of ['write', 'close']) {
+    let aborted = false;
+    const handle = {
+      createWritable: async () => ({
+        write: async () => {
+          if (failAt === 'write') throw new Error('Disk full');
+        },
+        close: async () => {
+          if (failAt === 'close') throw new Error('Disk full');
+        },
+        abort: async () => {
+          aborted = true;
+        },
+      }),
+    };
+    await assert.rejects(writeProfile(handle, profile), /Disk full/);
+    assert.equal(aborted, true);
+  }
+});
+
+test('removed files fail before writing', async () => {
+  const { writeProfile } = await import('../src/core/profile.js');
+  await assert.rejects(
+    writeProfile(
+      {
+        getFile: async () => {
+          throw new DOMException('Gone', 'NotFoundError');
+        },
+        createWritable: async () => assert.fail('Must not create a stream'),
+      },
+      profile,
+      'original',
+    ),
+    { name: 'NotFoundError' },
+  );
+});

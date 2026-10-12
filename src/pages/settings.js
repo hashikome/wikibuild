@@ -280,15 +280,22 @@ export function settingsBody(sec, title) {
     case 'profile': {
       const err = S.ui.errors.pname2;
       const fileErr = S.ui.errors.profileFile;
+      const draft = S.ui.profileDraft || { name: P.name, email: me().email, title: P.title };
+      const busy = S.ui.profileLoading || S.ui.profileSaving;
+      const fileHint = S.ui.profileFileName
+        ? `Save writes to ${S.ui.profileFileName}.`
+        : window.showSaveFilePicker
+          ? 'Save lets you choose where to write profile.json.'
+          : 'Save downloads a profile.json copy; it cannot update the original file in this browser.';
       return (
         H('How you appear to others in the workspace.') +
         `<form data-submit="saveProfile" class="col" style="gap:16px;max-width:440px">
       <input type="file" id="pf-file" accept=".json,application/json" data-in="profileFile" aria-label="Load profile JSON file" hidden>
       <div class="row" style="gap:14px">${av(d.me, 'xl', false)}<div><div class="label" style="margin-bottom:6px">Avatar color</div><div class="swatches">${['#5A67D8', '#C54B78', '#3B82C4', '#23918A', '#C48A1E', '#8662C9'].map(c => `<button type="button" class="sw ${me().c === c ? 'on' : ''}" style="--c:${c};width:22px;height:22px" data-a="avColor" data-v="${c}" aria-label="Color"></button>`).join('')}</div></div></div>
-      <div class="field"><label class="label" for="pf-name">Full name</label><input class="input ${err ? 'is-error' : ''}" id="pf-name" value="${esc(P.name)}">${err ? `<span class="err">${ic('circle-alert', 12)}${err}</span>` : ''}</div>
-      <div class="field"><label class="label" for="pf-title">Title</label><input class="input" id="pf-title" value="${esc(P.title)}"></div>
-      <div class="field"><label class="label" for="pf-email">Email</label><input class="input" id="pf-email" value="${esc(me().email)}" disabled><span class="hint">Load an updated profile.json to change your email.</span></div>
-      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-primary" data-a="saveProfile" id="pf-save">Save profile</button><button type="button" class="btn btn-secondary" data-a="loadProfile" ${S.ui.profileLoading ? 'disabled' : ''}>${ic('upload', 14)}${S.ui.profileLoading ? 'Loading profile…' : 'Load profile'}</button></div>
+      <div class="field"><label class="label" for="pf-name">Full name</label><input class="input ${err ? 'is-error' : ''}" id="pf-name" data-in="profileDraft" value="${esc(draft.name)}" ${busy ? 'disabled' : ''}>${err ? `<span class="err">${ic('circle-alert', 12)}${err}</span>` : ''}</div>
+      <div class="field"><label class="label" for="pf-title">Title</label><input class="input" id="pf-title" data-in="profileDraft" value="${esc(draft.title)}" ${busy ? 'disabled' : ''}></div>
+      <div class="field"><label class="label" for="pf-email">Email</label><input class="input" id="pf-email" type="email" data-in="profileDraft" value="${esc(draft.email)}" ${busy ? 'disabled' : ''}><span class="hint">${esc(fileHint)}</span></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-primary" data-a="saveProfile" id="pf-save" ${busy ? 'disabled' : ''}>${S.ui.profileSaving ? 'Saving profile…' : 'Save profile'}</button><button type="button" class="btn btn-secondary" data-a="loadProfile" ${busy ? 'disabled' : ''}>${ic('upload', 14)}${S.ui.profileLoading ? 'Loading profile…' : 'Load profile'}</button></div>
       ${fileErr ? `<span class="err" role="alert">${ic('circle-alert', 12)}${esc(fileErr)}</span>` : ''}</form>`
       );
     }

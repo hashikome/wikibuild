@@ -1,32 +1,24 @@
-# Save profile changes to a file
+# Profile file access after reload
 
-Status: backlog — not implemented.
+Status: current-session saving implemented; retaining access after reload deferred.
 
-The first slice loads name, email and title from a local `profile.json` and retains
-them in browser storage. The next requested behavior is to edit the profile in the
-existing screen and have **Save profile** save those changes back to a file.
+## Available now
 
-## Expected behavior
+Load profile connects a file for the current session. Save profile writes name,
+email and title to that file, or opens a save dialog if no file is connected.
+It preserves the existing user ID and assignments. Failed or cancelled saves keep
+pending edits; a pre-write content comparison stops an overwrite when an editor
+or agent has changed the connected file. Browsers without direct access download
+a clearly identified new copy instead.
 
-- Preserve the existing profile UI and stable user identity.
-- Let the user update name, email and title and save the same portable JSON shape.
-- Provide a clear file destination and accurate confirmation of an actual successful
-  file write. Do not report a browser-only update as saved to disk.
-- Account for permission denial, cancellation, unreadable/removed files and failed
-  writes. Preserve pending edits when saving fails.
-- Detect changes made by an agent or editor since loading; avoid silently overwriting
-  those changes. Agree the smallest useful reconciliation behavior.
-- Decide how to retain access to the selected file and provide a portable fallback
-  where direct writes are unavailable. A browser download is a new copy and must be
-  described as such.
-- Keep the file independent of workspace selection: the same person can open several
-  workspaces. Profile updates must not replace IDs or assignments.
+See [the profile guide](../profile.md) for behavior and verification.
 
-## Acceptance
+## Next decision
 
-Edit profile fields, save, and independently read the selected file to confirm its
-contents. Reload/import it and verify the same displayed profile. Cover denied
-permissions, a failed write, an external edit and the supported fallback path.
+Decide how the browser should remember the selected file across reloads and regain
+permission. Do not implement persistent handles as part of the current save slice.
 
-Storage mechanism and conflict UI remain decisions for this slice. The current
-importer does not retain a writable file handle or promise automatic synchronization.
+Future acceptance should cover reopening the browser, a revoked permission,
+a moved/deleted file and reconnecting a profile independently of workspace choice.
+More advanced external-edit reconciliation can follow actual use; the current
+behavior asks the user to copy pending edits before loading the changed file.
