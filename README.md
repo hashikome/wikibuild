@@ -1,5 +1,10 @@
 # Gr8r Studio
 
+This repository is evolving into **WikiBuild**, a local project management tool
+for a person working with agents. Read [PRODUCT.md](PRODUCT.md) for the agreed
+direction and first Rust/SQLite/Tauri milestone. The setup below runs the current
+JavaScript prototype; the native application is not implemented yet.
+
 A calm, structured project management workspace: home dashboard, inbox, my tasks, projects with
 board / list / table / calendar / timeline / files views, members, teams, activity and settings.
 
