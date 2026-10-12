@@ -13,6 +13,7 @@ import { viewOf } from '../shell/view-engine.js';
 import { TEMPLATES, closeModal, openModal } from '../overlays/modals.js';
 import { closePop, openPop, tgt } from '../overlays/popovers.js';
 import { strengthMeter } from '../pages/settings.js';
+import { readProfile } from '../core/profile.js';
 
 export const A = {},
   IN = {},
@@ -1932,6 +1933,34 @@ A.avColor = el => {
   me().c = el.dataset.v;
   save();
   render();
+};
+A.loadProfile = () => $('#pf-file')?.click();
+IN.profileFile = async el => {
+  const file = el.files?.[0];
+  el.value = ''; // Selecting the same file again should refresh its contents.
+  if (!file || S.ui.profileLoading) return;
+  const member = me();
+  S.ui.profileLoading = true;
+  S.ui.errors.profileFile = null;
+  render();
+  try {
+    const profile = await readProfile(file);
+    if (!member || me() !== member) throw new Error('The current profile changed. Load the file again.');
+    if (
+      mutate(() => {
+        Object.assign(member, profile);
+        S.prefs.name = profile.name;
+        S.prefs.title = profile.title;
+        S.ui.errors.pname2 = null;
+      })
+    )
+      toast('Profile loaded');
+  } catch (error) {
+    S.ui.errors.profileFile = error.message;
+  } finally {
+    S.ui.profileLoading = false;
+    render();
+  }
 };
 A.saveProfile = () => {
   const n = $('#pf-name').value.trim();

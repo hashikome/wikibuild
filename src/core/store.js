@@ -16,8 +16,8 @@ export const DEFAULT_PREFS = {
   motion: 'system',
   home: 'home',
   openTasks: 'drawer',
-  name: 'Tanjim Islam',
-  title: 'Head of Product',
+  name: 'Paul John',
+  title: 'Backend Engineer',
 };
 export function load() {
   try {

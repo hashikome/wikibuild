@@ -18,8 +18,19 @@ npm run dev       # http://localhost:5173 with hot reload
 npm run build     # production build in dist/
 npm run preview   # serve the production build locally
 npm run lint      # ESLint
+npm test          # profile file validation tests
 npm run format    # Prettier
 ```
+
+## Load your profile
+
+Use **Settings → Personal → Profile → Load profile** to select a local JSON file
+containing `name`, `email` and `title`. Start with [examples/profile.json](examples/profile.json).
+The current member ID and assignments stay intact; the imported details persist
+in this browser. The source file is not modified.
+
+See [the profile guide](docs/profile.md) for the format and behavior.
+[Saving profile edits back to the file](docs/backlog/profile-save-to-file.md) is in the backlog.
 
 ## Project structure
 
@@ -28,7 +39,7 @@ index.html              HTML entry; loads src/main.js
 public/favicon.svg      brand mark
 vite.config.js          Vite config, including the Lucide icon-subset plugin
 eslint.config.js        lint rules (ESLint flat config); formatting by Prettier (.prettierrc.json)
-.github/workflows/      CI: lint, format check, build
+.github/workflows/      CI: lint, tests, format check, build
 docs/preview.png        README screenshot
 src/
   main.js               entry: imports styles and modules, then boots the app
@@ -74,7 +85,7 @@ Dependencies point downward:
 
 ## Continuous integration
 
-Every push and pull request runs lint, the format check and a production build
+Every push and pull request runs lint, tests, the format check and a production build
 (`.github/workflows/ci.yml`).
 
 ## Deploy
