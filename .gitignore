@@ -5,5 +5,3 @@ dist/
 __MACOSX/
 *.log
 .env*
-.playwright-mcp/
-.impeccable/

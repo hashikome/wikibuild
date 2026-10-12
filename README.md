@@ -1,108 +1,82 @@
-# WikiBuild
+# Gr8r Studio
 
-A Hashikome experiment: read a local workspace directory through the project
-interface of [Gr8r Studio](https://github.com/gr8rstudio/gr8r-studio).
+A calm, structured project management workspace: home dashboard, inbox, my tasks, projects with
+board / list / table / calendar / timeline / files views, members, teams, activity and settings.
 
-For the first week or two, this is a **read-only display layer**. Use real plans,
-backlogs, task records, and attachments. Learn which views help before adding
-management features, one block at a time. See [PRODUCT.md](PRODUCT.md).
+Built with plain JavaScript ES modules and CSS, bundled by [Vite](https://vite.dev). There is no
+UI framework and no runtime dependency.
 
-## Run locally
+![Gr8r Studio home dashboard](docs/preview.png)
 
-Requires Node.js 22 (see `.nvmrc`).
+## Getting started
 
-```sh
-npm ci
-npm run dev
+Requires Node.js 18 or newer (`.nvmrc` pins 22).
+
+```bash
+npm install
+npm run dev       # http://localhost:5173 with hot reload
+npm run build     # production build in dist/
+npm run preview   # serve the production build locally
+npm run lint      # ESLint
+npm run format    # Prettier
 ```
 
-Open the local URL printed by Vite, normally `http://localhost:5173`. Click
-**Open workspace folder**, then choose the directory containing your `plans/`
-and `backlog/` folders. For Hashikome, select the existing private `workspace/`
-directory directly; do not copy it into this repository.
+## Project structure
 
-- In browsers with the native directory picker, WikiBuild asks for **read access**.
-  Refresh rereads the directory. Automatic refresh checks every 15 seconds while
-  the page is visible and you are not typing or selecting text.
-- Other browsers use a directory-selection fallback. Some browsers call this an
-  “upload” in their native dialog, but the application processes files locally;
-  there is no upload endpoint. This is a snapshot: select the folder again to refresh.
-- After a page reload, select the folder again. Contents and folder handles are
-  not persisted by the app. Only the light/dark appearance preference is saved.
-- **Try sample workspace** opens explicitly fictional content, separate from a
-  connected folder. The original interactive upstream demo remains at `/?demo=1`.
-
-The app never edits workspace files, commits content, or sends it to a server.
-External document links open only when clicked. Images in Markdown are shown as
-links rather than being fetched automatically. The inherited font stylesheet uses
-Google Fonts; this request contains no workspace content. Markdown HTML is escaped.
-
-## What appears in the UI
-
-| Source                                   | Display                                                            |
-| ---------------------------------------- | ------------------------------------------------------------------ |
-| Root `README.md`                         | Workspace title                                                    |
-| `plans/<name>/README.md`                 | Project overview                                                   |
-| `plans/<name>/tasks/**/*.md`             | Task records, with list and read-only board views                  |
-| `backlog/*.md`                           | Ideas; README and TEMPLATE are excluded as idea records            |
-| `backlog/parked/*.md`                    | Parked ideas, omitted from the home project list                   |
-| Backlog and plan index tables            | Status and next action when present; external product links        |
-| Other Markdown                           | Searchable document library                                        |
-| PDF, office files, images, ZIP, CSV, TXT | Original attachment downloads; CSV and TXT also have text previews |
-
-Documents need no migration. Simple scalar frontmatter and opening `Status:`,
-`Owner:`, `Assignee:`, `Due:`, `Priority:`, and `ID:` lines are recognized.
-Frontmatter wins over opening metadata; document status wins over index status.
-YAML lists, nested objects, and arbitrary frontmatter types are not interpreted.
-Missing fields remain missing. Status prose is preserved; the task board groups
-only recognized prefixes and puts everything else under **Unmapped**.
-
-**Workspace map** shows project coverage, missing fields, unavailable local links,
-and reading limits. The reader never follows local links outside the chosen folder.
-Linked product repositories stay external; choosing a parent folder does not scan
-multiple repositories as separate workspaces. Other folder layouts work as document
-libraries but may not map to projects.
-
-Hidden files/directories and dependency/build directories are skipped. Reading is
-limited to 2,000 supported files, 2 MiB per text document, 32 MiB total text,
-15,000 visited directory entries, and 16 nested directory levels. Limits and read
-failures are reported. Attachments are loaded as bytes only when downloaded.
-Their retention and backup remain the responsibility of the owning workspace.
-
-## Experiment boundary
-
-Available: project overview, task records, document reading, local links, original
-attachments, search, refresh, dark/light appearance, and mapping coverage.
-
-Not implemented: editing, collaboration, authentication, notifications, Git sync,
-calendar/timeline mapping, office/PDF previews, or inferred completion percentages.
-Task checklists remain within their documents; prose does not automatically become
-an assigned or scheduled task. The upstream demo does not provide real versions of
-these services.
-
-Use the reader for a week or two. Note views you actually return to, information
-you cannot find, and the next smallest useful capability. Keeping records as files
-lets the interface evolve without moving your planning content into a new system.
-
-## Development
-
-```sh
-npm test
-npm run lint
-npm run format:check
-npm run build
-npm run preview
+```
+index.html              HTML entry; loads src/main.js
+public/favicon.svg      brand mark
+vite.config.js          Vite config, including the Lucide icon-subset plugin
+eslint.config.js        lint rules (ESLint flat config); formatting by Prettier (.prettierrc.json)
+.github/workflows/      CI: lint, format check, build
+docs/preview.png        README screenshot
+src/
+  main.js               entry: imports styles and modules, then boots the app
+  styles/
+    index.css           imports every stylesheet in cascade order
+    tokens.css          colours, spacing, type, radius, the shared --gutter
+    base.css  components.css  shell.css  panels.css  overlays.css  states.css  motion.css  responsive.css
+    views/              list, board, table, calendar, timeline, projects & files
+    pages/              settings, auth & onboarding
+  core/                 utilities, constants, icons, store (state + lookups), theme
+  data/seed.js          demo workspace data
+  ui/                   shared render helpers, toasts, the select dropdown
+  shell/                render loop and router, sidebar/topbar layout, skeletons, view engine
+  components/           task list renderer
+  pages/                one module per route
+  views/                project views: board, table, calendar, timeline, files, overview
+  overlays/             task drawer, modals, popovers, context menu, command palette
+  features/             teams, subtasks, archive (rendering)
+  actions/              user actions, event wiring, keyboard shortcuts, drag and drop
 ```
 
-- `src/workspace/model.js`: deterministic mapping and safe Markdown rendering.
-- `src/workspace/directory.js`: read-only browser directory access and limits.
-- `src/workspace/app.js`, `reader.css`: reader UI using upstream visual tokens.
-- `src/entry.js`: reader entry; the original app is retained in `src/main.js`.
-- `tests/workspace.test.js`: mapping, precedence, boundaries, rendering, and refresh.
+### Layers
 
-The public app repository is [hashikome/wikibuild](https://github.com/hashikome/wikibuild).
-`origin` is the Hashikome fork; `upstream` is Gr8r Studio. Work lands on `main`.
-Private workspace records and browser verification artifacts are not part of the
-application repository or production build. Do not add real workspace fixtures.
+Dependencies point downward:
 
-The [upstream README](docs/upstream.md) describes the original demo's architecture.
+1. `core/` and `data/` depend on nothing else in the app.
+2. `ui/`, `shell/`, `components/`, `pages/`, `views/`, `overlays/` and `features/` render HTML from state.
+3. `actions/` change state and re-render. Each action module registers its handlers on the
+   shared action table (`A`) when it loads, so `main.js` imports them after `actions/actions.js`.
+
+## Conventions
+
+- **Rendering:** each page or view is a function that returns an HTML string from the store
+  (`S`). `render()` rebuilds the shell and keeps focus and scroll positions.
+- **Interactions:** elements declare `data-a="actionName"`. `actions/events.js` delegates the
+  click to `A.actionName`. Inputs use `data-in`, blur handlers use `data-blur`.
+- **Layout:** every page edge uses `var(--gutter)`, so the breadcrumb, page header, toolbar,
+  list, table and board start on the same line.
+- **Dropdowns:** write a normal `<select class="select">`. `ui/select.js` renders it as the
+  design-system menu and keeps the native element as the source of truth.
+- **Icons:** call `ic('name')` with any [Lucide](https://lucide.dev) icon name. The
+  `virtual:icons` plugin bundles only the icons the source uses.
+
+## Continuous integration
+
+Every push and pull request runs lint, the format check and a production build
+(`.github/workflows/ci.yml`).
+
+## Deploy
+
+`vercel.json` builds with Vite and serves `dist/`.
